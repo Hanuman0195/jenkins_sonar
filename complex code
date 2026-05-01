@@ -1,0 +1,80 @@
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class ProducerConsumerDemo {
+
+    // Shared queue
+    private static final int QUEUE_CAPACITY = 5;
+    private static final BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
+
+    // Counter to generate items
+    private static final AtomicInteger counter = new AtomicInteger(0);
+
+    // Producer class
+    static class Producer implements Runnable {
+        private final String name;
+
+        public Producer(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public void run() {
+            try {
+                while (true) {
+                    int item = counter.incrementAndGet();
+                    queue.put(item); // blocks if queue is full
+                    System.out.println(name + " produced: " + item);
+                    Thread.sleep(500);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                System.out.println(name + " stopped.");
+            }
+        }
+    }
+
+    // Consumer class
+    static class Consumer implements Runnable {
+        private final String name;
+
+        public Consumer(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public void run() {
+            try {
+                while (true) {
+                    int item = queue.take(); // blocks if queue is empty
+                    System.out.println(name + " consumed: " + item);
+                    Thread.sleep(800);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                System.out.println(name + " stopped.");
+            }
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+
+        // Start producers
+        executor.submit(new Producer("Producer-1"));
+        executor.submit(new Producer("Producer-2"));
+
+        // Start consumers
+        executor.submit(new Consumer("Consumer-1"));
+        executor.submit(new Consumer("Consumer-2"));
+
+        // Let it run for some time
+        Thread.sleep(5000);
+
+        // Shutdown
+        executor.shutdownNow();
+        executor.awaitTermination(2, TimeUnit.SECONDS);
+
+        System.out.println("System shutdown complete.");
+    }
+}
